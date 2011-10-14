@@ -29,3 +29,8 @@
     (is (= (:edge-or solved) edge-or))
     (is (not= (:corner-or solved) corner-or))
     (is (= 6 (count (filter #{0} corner-or))))))
+
+(deftest solvable?-test
+  (is (solvable? solved))
+  (doseq [cube (apply concat (reachable solved 2))]
+    (is (solvable? cube))))
