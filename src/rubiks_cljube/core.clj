@@ -96,6 +96,75 @@
      :F F, :F2 (comp F F), :F' (comp F F F),
      :B B, :B2 (comp B B), :B' (comp B B B)}))
 
+(defn apply-moves
+  [cube & move-keywords]
+  (reduce #(%2 %1) cube (map moves move-keywords)))
+
+(let [orientable?
+        (fn [{:keys [edge-or corner-or]}]
+          (and (zero? (rem (apply + edge-or) 2))
+               (zero? (rem (apply + corner-or) 3))))
+      reducible-permutation?
+        (fn [perm]
+          (let [cycles
+                  (loop [cycles []]
+                    (if (= (count perm) (count (flatten cycles)))
+                      cycles
+                      (let [next-cycle-start
+                              (first (remove (set (flatten cycles)) perm)),
+                            next-cycle
+                              (cons next-cycle-start
+                                    (take-while (complement #{next-cycle-start})
+                                                (rest (iterate perm next-cycle-start))))]
+                        (recur (conj cycles next-cycle))))),
+                reduced-cycles
+                  (for [cycle cycles]
+                    (take (rem (count cycle) 3) cycle))
+                ; This should be just a list of pairs
+                non-trivial-cycles (remove #(>= 1 (count %)) reduced-cycles)]
+            (loop [cycles non-trivial-cycles]
+              (if (< (count cycles) 2)
+                (empty? cycles)
+                (nnext cycles)))))
+      positionable?
+        (fn [{:keys [edge-pos corner-pos]}]
+          (=
+            (reducible-permutation? edge-pos)
+            (reducible-permutation? corner-pos)))]
+  (defn solvable?
+    [cube]
+    (and (orientable? cube) (positionable? cube))))
+
+(defn random-cube*
+  []
+  {:corner-pos (vec (shuffle (range 8))),
+   :edge-pos   (vec (shuffle (range 12))),
+   :corner-or  (vec (take 8 (repeatedly (partial rand-int 3)))),
+   :edge-or    (vec (take 12 (repeatedly (partial rand-int 2))))})
+
+(defn random-cube
+  []
+  (let [c (random-cube*)]
+    (if (solvable? c)
+      c
+      (recur))))
+
+(defn reachable
+  [cube max-moves]
+  (nth
+    (iterate
+      (fn [reaches]
+        (let [all-seen (apply sets/union reaches),
+              new-cubes
+                (for [cube (last reaches),
+                      move (vals moves),
+                      cube* [(move cube)],
+                      :when (not (all-seen cube*))]
+                  cube*)]
+          (conj reaches (set new-cubes))))
+      [#{cube}])
+    max-moves))
+
 ; I guess we'll want to store some info about how to solve each of
 ; these positions...
 (let [subgroup-moves
