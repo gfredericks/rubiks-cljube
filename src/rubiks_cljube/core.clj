@@ -13,7 +13,8 @@
   clockwise. Orientations are wrt the front and back (blue/green).
   Edge orientations are 0 for correct and 1 for flipped. Corner
   orientations are 0 for correct, 1 for clockwise twist, 2 for
-  counter-clockwise twist.")
+  counter-clockwise twist."
+  (:require [clojure.set :as sets]))
 
 (def solved
   {:corner-pos (vec (range 8)),
@@ -94,3 +95,26 @@
      :D D, :D2 (comp D D), :D' (comp D D D),
      :F F, :F2 (comp F F), :F' (comp F F F),
      :B B, :B2 (comp B B), :B' (comp B B B)}))
+
+; I guess we'll want to store some info about how to solve each of
+; these positions...
+(let [subgroup-moves
+        (map moves
+          (remove #{:F :F' :B :B' :R :R' :L :L'} (keys moves)))]
+  (defn subgroup
+    []
+    (loop [cubeset #{solved}, queue [solved]]
+      (if (empty? queue)
+        cubeset
+        (let [[x & xs] queue,
+              ys (set (map #(% x) subgroup-moves)),
+              n00bs (sets/difference ys cubeset)]
+          (recur
+            (sets/union cubeset ys)
+            (if (empty? n00bs)
+              xs
+              (apply conj xs n00bs))))))))
+
+(defn print-cube
+  [cube]
+  )
