@@ -158,24 +158,19 @@
       [#{cube}])
     max-moves))
 
-; I guess we'll want to store some info about how to solve each of
-; these positions...
-(let [subgroup-moves
-        (map moves
-          (remove #{:F :F' :B :B' :R :R' :L :L'} (keys moves)))]
-  (defn subgroup
-    []
-    (loop [cubeset #{solved}, queue [solved]]
-      (if (empty? queue)
-        cubeset
-        (let [[x & xs] queue,
-              ys (set (map #(% x) subgroup-moves)),
-              n00bs (sets/difference ys cubeset)]
-          (recur
-            (sets/union cubeset ys)
-            (if (empty? n00bs)
-              xs
-              (apply conj xs n00bs))))))))
+(defn subgroup?
+  "Returns true if the cube is part of the subgroup that only allows
+  U and D quarter turns, and half turns on all other faces."
+  [{:keys [edge-or corner-or]}]
+  (and (every? zero? edge-or)
+       (let [f (frequencies corner-or)]
+         (= (f 1) (f 2)))))
+
+(defn solve-subgroup
+  "Given a cube in the subgroup, returns a sequence of moves that will solve it."
+  [cube]
+  {:pre [(subgroup? cube)]}
+  )
 
 (defn print-cube
   [cube]
