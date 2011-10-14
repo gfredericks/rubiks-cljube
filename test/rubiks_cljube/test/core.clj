@@ -33,4 +33,7 @@
 (deftest solvable?-test
   (is (solvable? solved))
   (doseq [cube (apply concat (reachable solved 2))]
-    (is (solvable? cube))))
+    ; Any cube we can turn to is solvable
+    (is (solvable? cube))
+    ; Flipping an edge on a solvable cube is always not solvable
+    (is (not (solvable? (update-in cube [:edge-or 7] (partial - 1)))))))

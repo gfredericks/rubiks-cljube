@@ -117,15 +117,8 @@
                                     (take-while (complement #{next-cycle-start})
                                                 (rest (iterate perm next-cycle-start))))]
                         (recur (conj cycles next-cycle))))),
-                reduced-cycles
-                  (for [cycle cycles]
-                    (take (rem (count cycle) 3) cycle))
-                ; This should be just a list of pairs
-                non-trivial-cycles (remove #(>= 1 (count %)) reduced-cycles)]
-            (loop [cycles non-trivial-cycles]
-              (if (< (count cycles) 2)
-                (empty? cycles)
-                (nnext cycles)))))
+                has-even-elements? (comp even? count)]
+            (has-even-elements? (filter has-even-elements? cycles))))
       positionable?
         (fn [{:keys [edge-pos corner-pos]}]
           (=
