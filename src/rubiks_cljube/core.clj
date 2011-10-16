@@ -98,7 +98,9 @@
 
 (defn apply-moves
   [cube & move-keywords]
-  (reduce #(%2 %1) cube (map moves move-keywords)))
+  (if (sequential? (first move-keywords))
+    (apply apply-moves cube (first move-keywords))
+    (reduce #(%2 %1) cube (map moves move-keywords))))
 
 (let [orientable?
         (fn [{:keys [edge-or corner-or]}]
@@ -165,6 +167,47 @@
   (and (every? zero? edge-or)
        (let [f (frequencies corner-or)]
          (= (f 1) (f 2)))))
+
+(def valid-moves-following
+  (memoize
+    (fn [move]
+      (let [move-class #(subs (name %) 0 1),
+            forbidden
+              ({"U" #{"U"},
+                "D" #{"D" "U"},
+                "F" #{"F"},
+                "B" #{"F" "B"},
+                "L" #{"L"},
+                "R" #{"L" "R"}} (move-class move))]
+        (remove #(forbidden (move-class %)) (keys moves))))))
+
+(defn all-move-seqs
+  "Returns a seq of all sequences of moves of a given length with the
+  obvious redundancies removed."
+  ([depth]
+    (if (zero? depth)
+      [[]]
+      (mapcat
+        #(cons % (all-move-seqs (dec depth) %))
+        (keys moves))))
+  ([depth last-move]
+    (if (zero? depth)
+      [[]]
+      (mapcat
+        #(cons % (all-move-seqs (dec depth) %))
+        (valid-moves-following last-move)))))
+
+(defn naive-brute-force
+  "Returns a sequence of moves."
+  ([cube satisfied?]
+    (loop [depth 0]
+      (if-let [moves (naive-brute-force cube satisfied? depth)]
+        moves
+        (recur (inc depth)))))
+  ([cube satisfied? depth]
+    (first
+      (filter #(satisfied? (apply-moves cube %))
+              (all-move-seqs depth)))))
 
 (defn solve-subgroup
   "Given a cube in the subgroup, returns a sequence of moves that will solve it."
