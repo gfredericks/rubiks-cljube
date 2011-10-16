@@ -144,6 +144,7 @@
       c
       (recur))))
 
+; I'm not sure we need this for anything
 (defn reachable
   [cube max-moves]
   (nth
