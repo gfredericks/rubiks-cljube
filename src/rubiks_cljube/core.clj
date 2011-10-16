@@ -188,13 +188,15 @@
     (if (zero? depth)
       [[]]
       (mapcat
-        #(cons % (all-move-seqs (dec depth) %))
+        #(for [move-seq (all-move-seqs (dec depth) %)]
+           (cons % move-seq))
         (keys moves))))
   ([depth last-move]
     (if (zero? depth)
       [[]]
       (mapcat
-        #(cons % (all-move-seqs (dec depth) %))
+        #(for [move-seq (all-move-seqs (dec depth) %)]
+           (cons % move-seq))
         (valid-moves-following last-move)))))
 
 (defn naive-brute-force
