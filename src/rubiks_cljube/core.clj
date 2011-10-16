@@ -187,17 +187,15 @@
   ([depth]
     (if (zero? depth)
       [[]]
-      (mapcat
-        #(for [move-seq (all-move-seqs (dec depth) %)]
-           (cons % move-seq))
-        (keys moves))))
+      (for [move (keys moves),
+            move-seq (all-move-seqs (dec depth) move)]
+        (cons move move-seq))))
   ([depth last-move]
     (if (zero? depth)
       [[]]
-      (mapcat
-        #(for [move-seq (all-move-seqs (dec depth) %)]
-           (cons % move-seq))
-        (valid-moves-following last-move)))))
+      (for [move (valid-moves-following last-move),
+            move-seq (all-move-seqs (dec depth) move)]
+        (cons move move-seq)))))
 
 (defn naive-brute-force
   "Returns a sequence of moves."
@@ -210,6 +208,19 @@
     (first
       (filter #(satisfied? (apply-moves cube %))
               (all-move-seqs depth)))))
+
+(defn invert
+  "Returns the sequence of moves that undoes the one given."
+  [moves]
+  (for [move (reverse moves)]
+    (or
+      ({:R :R' :R' :R,
+        :F :F' :F' :F,
+        :D :D' :D' :D,
+        :B :B' :B' :B,
+        :L :L' :L' :L,
+        :U :U' :U' :U} move)
+      move)))
 
 (defn solve-subgroup
   "Given a cube in the subgroup, returns a sequence of moves that will solve it."
