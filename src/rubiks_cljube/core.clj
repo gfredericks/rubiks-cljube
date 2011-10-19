@@ -16,6 +16,9 @@
   counter-clockwise twist."
   (:require [clojure.set :as sets]))
 
+; Any value can be nil, which means unspecified or undefined or whatever.
+; Gray-colored.  Just as long as the other functions you use take that into
+; account.
 (def solved
   {:corner-pos (vec (range 8)),
    :edge-pos   (vec (range 12)),
@@ -48,7 +51,8 @@
         (fn [direction cube & corners]
           (reduce
             (fn [cube corner]
-              (update-in cube [:corner-or corner] #(rem (+ % direction 3) 3)))
+              (update-in cube [:corner-or corner]
+                         #(when % (rem (+ % direction 3) 3))))
             cube
             corners)),
       twist-cw (partial twist 1),
@@ -57,7 +61,7 @@
         (fn [cube & edges]
           (reduce
             (fn [cube edge]
-              (update-in cube [:edge-or edge] #(- 1 %)))
+              (update-in cube [:edge-or edge] #(when % (- 1 %))))
             cube
             edges)),
       R #(-> %
