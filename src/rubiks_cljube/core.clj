@@ -30,26 +30,20 @@
 
 (let [circular-pair-partition
         (fn [coll] (partition 2 1 (concat coll [(first coll)])))
-      rotate-corners
-        (fn [cube & corners]
+      rotate-abstract
+        (fn [pos-key or-key cube & cubies]
           (reduce
             (fn [cube' [c1 c2]]
               (->
                 cube'
-                (assoc-in [:corner-pos c2] (get-in cube [:corner-pos c1]))
-                (assoc-in [:corner-or  c2] (get-in cube [:corner-or c1]))))
+                (assoc-in [pos-key c2] (get-in cube [pos-key c1]))
+                (assoc-in [or-key  c2] (get-in cube [or-key  c1]))))
             cube
-            (circular-pair-partition corners))),
+            (circular-pair-partition cubies))),
+      rotate-corners
+        (partial rotate-abstract :corner-pos :corner-or)
       rotate-edges
-        (fn [cube & edges]
-          (reduce
-            (fn [cube' [e1 e2]]
-              (->
-                cube'
-                (assoc-in [:edge-pos e2] (get-in cube [:edge-pos e1]))
-                (assoc-in [:edge-or  e2] (get-in cube [:edge-or e1]))))
-            cube
-            (circular-pair-partition edges))),
+        (partial rotate-abstract :edge-pos :edge-or)
       twist
         (fn [direction cube & corners]
           (reduce
