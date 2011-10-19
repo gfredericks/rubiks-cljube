@@ -25,6 +25,12 @@
    :corner-or  (vec (repeat 8 0)),
    :edge-or    (vec (repeat 12 0))})
 
+(def gray
+  {:corner-pos (vec (repeat 8 nil)),
+   :edge-pos   (vec (repeat 12 nil)),
+   :corner-or  (vec (repeat 8 nil)),
+   :edge-or    (vec (repeat 12 nil))})
+
 ; TODO: in order to solve arbitrary pairs of positions in terms of solving to
 ; the normal solved state, we have to be able to consider the compound effect
 ; of several moves in an efficient manner. I think. That would also clear up
@@ -267,6 +273,46 @@
         mvs
         (invert
           (@sixes (apply-moves cube mvs)))))))
+
+(def partially-solved-cubes
+  {:top-layer
+     (zipmap
+       (keys solved)
+       (for [k (keys solved)]
+         (vec (concat (take 4 (solved k)) (drop 4 (gray k)))))),
+   :edges
+     (assoc solved :corner-pos (:corner-pos gray) :corner-or (:corner-or gray)),
+   :two-by-two-by-two
+     {:corner-pos [0 nil nil nil nil nil nil nil],
+      :edge-pos   [0 nil nil 3 4 nil nil nil nil nil nil nil],
+      :corner-or  [0 nil nil nil nil nil nil nil],
+      :edge-or    [0 nil nil 0 0 nil nil nil nil nil nil nil]}})
+
+(defn gray-out-pieces
+  [solved-gray-cube cube]
+  (let [abstract
+          (fn [pos or cube]
+            (let [s (set (remove #{nil} (pos solved-gray-cube))),
+                  pairs (map vector (pos cube) (or cube)),
+                  poses (for [[i r] pairs] (if (s i) i)),
+                  ors (for [[i r] pairs] (if (s i) r))]
+              (assoc cube pos (vec poses) or (vec ors))))]
+    (-> cube ((partial abstract :edge-pos :edge-or)) ((partial abstract :corner-pos :corner-or)))))
+
+(defn fixed-move-lookahead-map
+  ([cube move-count] (fixed-move-lookahead-map (keys moves) cube move-count))
+  ([valid-moves cube move-count]
+    (let [tw (take-while #(<= (count (first %)) move-count) (all-cubes-from valid-moves cube))]
+      (zipmap (map second tw) (map first tw)))))
+
+(defn solve-to-cube
+  [target-cube cube]
+  (let [lookahead (fixed-move-lookahead-map target-cube 3),
+        mvs (naive-brute-force cube #(contains? lookahead %))]
+    (concat
+      mvs
+      (invert
+        (lookahead (apply-moves cube mvs))))))
 
 (defn print-cube
   [cube]
