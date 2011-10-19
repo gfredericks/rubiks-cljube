@@ -37,3 +37,15 @@
     (is (solvable? cube))
     ; Flipping an edge on a solvable cube is always not solvable
     (is (not (solvable? (update-in cube [:edge-or 7] (partial - 1)))))))
+
+(deftest naive-brute-force-test
+  (are [moves] (= (invert moves)
+                  (naive-brute-force
+                    (apply-moves solved moves)
+                    (partial = solved)))
+    [:U2 :L' :D]
+    [:D' :F' :R']
+    [:U  :B' :L2]
+    [:R' :B]
+    [:L]
+    []))

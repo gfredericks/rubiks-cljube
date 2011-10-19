@@ -98,7 +98,9 @@
 
 (defn apply-moves
   [cube & move-keywords]
-  (reduce #(%2 %1) cube (map moves move-keywords)))
+  (if (sequential? (first move-keywords))
+    (apply apply-moves cube (first move-keywords))
+    (reduce #(%2 %1) cube (map moves move-keywords))))
 
 (let [orientable?
         (fn [{:keys [edge-or corner-or]}]
@@ -142,6 +144,7 @@
       c
       (recur))))
 
+; I'm not sure we need this for anything
 (defn reachable
   [cube max-moves]
   (nth
@@ -158,24 +161,88 @@
       [#{cube}])
     max-moves))
 
-; I guess we'll want to store some info about how to solve each of
-; these positions...
-(let [subgroup-moves
-        (map moves
-          (remove #{:F :F' :B :B' :R :R' :L :L'} (keys moves)))]
-  (defn subgroup
-    []
-    (loop [cubeset #{solved}, queue [solved]]
-      (if (empty? queue)
-        cubeset
-        (let [[x & xs] queue,
-              ys (set (map #(% x) subgroup-moves)),
-              n00bs (sets/difference ys cubeset)]
-          (recur
-            (sets/union cubeset ys)
-            (if (empty? n00bs)
-              xs
-              (apply conj xs n00bs))))))))
+(defn subgroup?
+  "Returns true if the cube is part of the subgroup that only allows
+  U and D quarter turns, and half turns on all other faces."
+  [{:keys [edge-or corner-or]}]
+  (and (every? zero? edge-or)
+       (let [f (frequencies corner-or)]
+         (= (f 1) (f 2)))))
+
+(def valid-subgroup-moves #{:U :U' :U2
+                            :D :D' :D2
+                            :F2 :B2 :L2 :R2})
+
+(defn random-subgroup-cube
+  []
+  (apply-moves solved (take 100 (repeatedly (partial rand-nth (seq valid-subgroup-moves))))))
+
+(def valid-moves-following
+  (memoize
+    (fn vmf
+      ([move] (vmf (keys moves) move))
+      ([allowed-moves move]
+        (if (nil? move)
+          allowed-moves
+          (let [move-class #(subs (name %) 0 1),
+                forbidden
+                  ({"U" #{"U"},
+                    "D" #{"D" "U"},
+                    "F" #{"F"},
+                    "B" #{"F" "B"},
+                    "L" #{"L"},
+                    "R" #{"L" "R"}} (move-class move))]
+            (remove #(forbidden (move-class %)) allowed-moves)))))))
+
+(defn all-cubes-from
+  "Returns an infinite seq of pairs of [moves cube], in order
+  of length of the move list."
+  ([cube] (all-cubes-from (keys moves) cube))
+  ([allowed-moves cube]
+    (for [depth (range),
+          pair (all-cubes-from allowed-moves cube depth)]
+      pair))
+  ([allowed-moves cube depth]
+    (if (zero? depth)
+      [[[] cube]]
+      (for [[move-vec cube*] (all-cubes-from allowed-moves cube (dec depth)),
+            next-move (valid-moves-following allowed-moves (peek move-vec))]
+        [(conj move-vec next-move) (apply-moves cube* next-move)]))))
+
+(defn naive-brute-force
+  "Returns a sequence of moves."
+  ([cube satisfied?] (naive-brute-force (keys moves) cube satisfied?))
+  ([allowed-moves cube satisfied?]
+    (->>
+      (all-cubes-from allowed-moves cube)
+      (filter #(satisfied? (second %)))
+      (first)
+      (first))))
+
+(defn invert
+  "Returns the sequence of moves that undoes the one given."
+  [moves]
+  (for [move (reverse moves)]
+    (or
+      ({:R :R' :R' :R,
+        :F :F' :F' :F,
+        :D :D' :D' :D,
+        :B :B' :B' :B,
+        :L :L' :L' :L,
+        :U :U' :U' :U} move)
+      move)))
+
+(let [tw (take-while #(< (count (first %)) 7) (all-cubes-from valid-subgroup-moves solved)),
+      sixes (delay (zipmap (map second tw) (map first tw)))]
+  (defn solve-subgroup
+    "Given a cube in the subgroup, returns a sequence of moves that will solve it."
+    [cube]
+    {:pre [(subgroup? cube)]}
+    (let [mvs (naive-brute-force valid-subgroup-moves cube #(contains? @sixes %))]
+      (concat
+        mvs
+        (invert
+          (@sixes (apply-moves cube mvs)))))))
 
 (defn print-cube
   [cube]
