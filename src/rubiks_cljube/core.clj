@@ -198,6 +198,26 @@
                     "R" #{"L" "R"}} (move-class move))]
             (remove #(forbidden (move-class %)) allowed-moves)))))))
 
+(defn random-moves
+  ([n] (random-moves (keys moves) n))
+  ([valid-moves n]
+    (if (<= n 0)
+      []
+      (loop [ms [(rand-nth valid-moves)]]
+        (if (<= n (count ms))
+          ms
+          (recur (conj ms (rand-nth (valid-moves-following (peek ms))))))))))
+
+(let [equal-or-first-nil? (fn [[a b]] (or (nil? a) (= a b)))]
+  (defn gray-solved?
+    "Checks if all non-nil values in the cube representation are good."
+    [{:keys [corner-pos edge-pos corner-or edge-or]}]
+    (and
+      (not-any? #{1} edge-or)
+      (not-any? #{1} corner-or)
+      (every? equal-or-first-nil? (map vector corner-pos (range)))
+      (every? equal-or-first-nil? (map vector edge-pos (range))))))
+
 (defn all-cubes-from
   "Returns an infinite seq of pairs of [moves cube], in order
   of length of the move list."
