@@ -22,6 +22,12 @@
    :corner-or  (vec (repeat 8 0)),
    :edge-or    (vec (repeat 12 0))})
 
+; TODO: in order to solve arbitrary pairs of positions in terms of solving to
+; the normal solved state, we have to be able to consider the compound effect
+; of several moves in an efficient manner. I think. That would also clear up
+; the inefficiency of implementing F' as (comp F F F). And it would be more in
+; line with the group representation of the rubik's cube.
+
 (let [circular-pair-partition
         (fn [coll] (partition 2 1 (concat coll [(first coll)])))
       rotate-corners
